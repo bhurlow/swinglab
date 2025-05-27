@@ -159,7 +159,22 @@ export default function Home() {
   const [steps, setSteps] = useState<boolean[][]>(
     Array(3)
       .fill(null)
-      .map(() => Array(16).fill(false))
+      .map((_, trackIndex) => {
+        if (trackIndex === 0) {
+          // Kick
+          return Array(16)
+            .fill(false)
+            .map((_, step) => step % 4 === 0);
+        } else if (trackIndex === 1) {
+          // Snare
+          return Array(16)
+            .fill(false)
+            .map((_, step) => step % 4 === 2);
+        } else {
+          // Hi-hat
+          return Array(16).fill(true);
+        }
+      })
   );
   const [swingAmounts, setSwingAmounts] = useState<number[]>([50, 50, 50]);
   const [distortionAmount, setDistortionAmount] = useState(0);
@@ -186,6 +201,8 @@ export default function Home() {
   const swingAmountsRef = useRef(swingAmounts);
   const distortionAmountRef = useRef(distortionAmount);
   const compressionAmountRef = useRef(compressionAmount);
+  const distortionGainRef = useRef<GainNode | null>(null);
+  const compressionGainRef = useRef<GainNode | null>(null);
 
   // Create distortion curve
   const makeDistortionCurve = (amount: number) => {
@@ -261,10 +278,32 @@ export default function Home() {
         compressorRef.current.attack.value = 0.003;
         compressorRef.current.release.value = 0.25;
 
+        // Create gain nodes for effect routing
+        distortionGainRef.current = audioContextRef.current.createGain();
+        compressionGainRef.current = audioContextRef.current.createGain();
+
+        // Create a merger for the final mix
+        const merger = audioContextRef.current.createChannelMerger(2);
+
         // Connect the audio chain
+        // Filter is always active
         filterRef.current.connect(distortionRef.current);
-        distortionRef.current.connect(compressorRef.current);
-        compressorRef.current.connect(audioContextRef.current.destination);
+        filterRef.current.connect(merger, 0, 0); // Dry signal left
+        filterRef.current.connect(merger, 0, 1); // Dry signal right
+
+        // Distortion path
+        distortionRef.current.connect(distortionGainRef.current);
+        distortionGainRef.current.connect(compressorRef.current);
+        compressorRef.current.connect(compressionGainRef.current);
+        compressionGainRef.current.connect(merger, 0, 0); // Wet signal left
+        compressionGainRef.current.connect(merger, 0, 1); // Wet signal right
+
+        // Connect to output
+        merger.connect(audioContextRef.current.destination);
+
+        // Set initial gain values
+        distortionGainRef.current.gain.value = isDistortionEnabled ? 1 : 0;
+        compressionGainRef.current.gain.value = isCompressionEnabled ? 1 : 0;
 
         // Load drum samples
         const samples = {
@@ -317,7 +356,43 @@ export default function Home() {
         audioContextRef.current.close();
       }
     };
-  }, [compressionAmount, distortionAmount, filterCutoff]);
+  }, []);
+
+  // Effect for updating filter
+  useEffect(() => {
+    if (filterRef.current) {
+      filterRef.current.frequency.value = filterCutoff;
+    }
+  }, [filterCutoff]);
+
+  // Effect for updating distortion
+  useEffect(() => {
+    if (distortionRef.current) {
+      distortionRef.current.curve = makeDistortionCurve(distortionAmount);
+    }
+  }, [distortionAmount]);
+
+  // Effect for updating compression
+  useEffect(() => {
+    if (compressorRef.current) {
+      compressorRef.current.threshold.value = -50 + compressionAmount * 0.5;
+      compressorRef.current.ratio.value = 1 + compressionAmount * 0.1;
+    }
+  }, [compressionAmount]);
+
+  // Effect for enabling/disabling distortion
+  useEffect(() => {
+    if (distortionGainRef.current) {
+      distortionGainRef.current.gain.value = isDistortionEnabled ? 1 : 0;
+    }
+  }, [isDistortionEnabled]);
+
+  // Effect for enabling/disabling compression
+  useEffect(() => {
+    if (compressionGainRef.current) {
+      compressionGainRef.current.gain.value = isCompressionEnabled ? 1 : 0;
+    }
+  }, [isCompressionEnabled]);
 
   const scheduleNote = (time: number) => {
     if (!audioContextRef.current || !filterRef.current) return;
@@ -475,7 +550,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
+      <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-6xl">
         <h1 className="text-3xl font-bold text-center text-gray-800 mb-8">
           Swing Machine
         </h1>
@@ -486,206 +561,244 @@ export default function Home() {
           </div>
         )}
 
-        <div className="space-y-8">
-          {/* Global Controls */}
-          <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">
-              Global Controls
-            </h2>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label
-                  htmlFor="tempo"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Tempo: {tempo} BPM
-                </label>
-                <input
-                  type="range"
-                  id="tempo"
-                  min="60"
-                  max="200"
-                  value={tempo}
-                  onChange={(e) => setTempo(parseInt(e.target.value))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label
-                  htmlFor="velocity"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Velocity: {velocity}%
-                </label>
-                <input
-                  type="range"
-                  id="velocity"
-                  min="0"
-                  max="100"
-                  value={velocity}
-                  onChange={(e) => setVelocity(parseInt(e.target.value))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Sample Controls */}
-          {["Kick", "Snare", "Hi-hat"].map((label, index) => (
-            <div key={label} className="space-y-4 p-4 bg-gray-50 rounded-lg">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-800">{label}</h2>
-                <button
-                  onClick={() => randomizeTrack(index)}
-                  disabled={isPlaying}
-                  className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
-                    isRandomizing === index
-                      ? "bg-purple-100 text-purple-700"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  } disabled:opacity-50 disabled:cursor-not-allowed`}
-                >
-                  {isRandomizing === index ? "Randomizing..." : "Randomize"}
-                </button>
-              </div>
-              <div className="space-y-2">
-                <label
-                  htmlFor={`swing-${label}`}
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Swing: {swingAmounts[index]}%
-                </label>
-                <input
-                  type="range"
-                  id={`swing-${label}`}
-                  min="0"
-                  max="100"
-                  value={swingAmounts[index]}
-                  onChange={(e) =>
-                    handleSwingChange(index, parseInt(e.target.value))
-                  }
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                />
-              </div>
-            </div>
-          ))}
-
-          {/* Effects Controls */}
-          <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">
-              Effects
-            </h2>
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-gray-700">
-                    Filter
-                  </label>
-                </div>
+        <div className="flex gap-8">
+          {/* Left Column - Controls */}
+          <div className="w-1/2 space-y-8">
+            {/* Global Controls */}
+            <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+              <h2 className="text-lg font-semibold text-gray-800 mb-4">
+                Global Controls
+              </h2>
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <label
-                    htmlFor="filterCutoff"
+                    htmlFor="tempo"
                     className="block text-sm font-medium text-gray-700"
                   >
-                    Cutoff: {filterCutoff} Hz
+                    Tempo: {tempo} BPM
                   </label>
                   <input
                     type="range"
-                    id="filterCutoff"
-                    min="20"
-                    max="20000"
-                    step="1"
-                    value={filterCutoff}
-                    onChange={(e) => setFilterCutoff(parseInt(e.target.value))}
+                    id="tempo"
+                    min="60"
+                    max="200"
+                    value={tempo}
+                    onChange={(e) => setTempo(parseInt(e.target.value))}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label
+                    htmlFor="velocity"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Velocity: {velocity}%
+                  </label>
+                  <input
+                    type="range"
+                    id="velocity"
+                    min="0"
+                    max="100"
+                    value={velocity}
+                    onChange={(e) => setVelocity(parseInt(e.target.value))}
                     className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                   />
                 </div>
               </div>
+            </div>
 
-              <div className="space-y-2">
+            {/* Sample Controls */}
+            {["Kick", "Snare", "Hi-hat"].map((label, index) => (
+              <div key={label} className="space-y-4 p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-gray-700">
-                    Distortion
-                  </label>
+                  <h2 className="text-lg font-semibold text-gray-800">
+                    {label}
+                  </h2>
                   <button
-                    onClick={() => setIsDistortionEnabled(!isDistortionEnabled)}
-                    className={`px-3 py-1 rounded-md text-sm font-medium ${
-                      isDistortionEnabled
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-gray-100 text-gray-700"
-                    }`}
+                    onClick={() => randomizeTrack(index)}
+                    disabled={isPlaying}
+                    className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
+                      isRandomizing === index
+                        ? "bg-purple-100 text-purple-700"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
-                    {isDistortionEnabled ? "Enabled" : "Disabled"}
+                    {isRandomizing === index ? "Randomizing..." : "Randomize"}
                   </button>
                 </div>
-                {isDistortionEnabled && (
-                  <div className="space-y-2">
-                    <label
-                      htmlFor="distortion"
-                      className="block text-sm font-medium text-gray-700"
-                    >
-                      Amount: {distortionAmount}%
-                    </label>
-                    <input
-                      type="range"
-                      id="distortion"
-                      min="0"
-                      max="100"
-                      value={distortionAmount}
-                      onChange={(e) =>
-                        setDistortionAmount(parseInt(e.target.value))
-                      }
-                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-gray-700">
-                    Compression
+                <div className="space-y-2">
+                  <label
+                    htmlFor={`swing-${label}`}
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Swing: {swingAmounts[index]}%
                   </label>
-                  <button
-                    onClick={() =>
-                      setIsCompressionEnabled(!isCompressionEnabled)
+                  <input
+                    type="range"
+                    id={`swing-${label}`}
+                    min="0"
+                    max="100"
+                    value={swingAmounts[index]}
+                    onChange={(e) =>
+                      handleSwingChange(index, parseInt(e.target.value))
                     }
-                    className={`px-3 py-1 rounded-md text-sm font-medium ${
-                      isCompressionEnabled
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-gray-100 text-gray-700"
-                    }`}
-                  >
-                    {isCompressionEnabled ? "Enabled" : "Disabled"}
-                  </button>
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                  />
                 </div>
-                {isCompressionEnabled && (
+              </div>
+            ))}
+
+            {/* Effects Controls */}
+            <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+              <h2 className="text-lg font-semibold text-gray-800 mb-4">
+                Effects
+              </h2>
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-gray-700">
+                      Filter
+                    </label>
+                  </div>
                   <div className="space-y-2">
                     <label
-                      htmlFor="compression"
+                      htmlFor="filterCutoff"
                       className="block text-sm font-medium text-gray-700"
                     >
-                      Amount: {compressionAmount}%
+                      Cutoff: {filterCutoff} Hz
                     </label>
                     <input
                       type="range"
-                      id="compression"
-                      min="0"
-                      max="100"
-                      value={compressionAmount}
+                      id="filterCutoff"
+                      min="20"
+                      max="20000"
+                      step="1"
+                      value={filterCutoff}
                       onChange={(e) =>
-                        setCompressionAmount(parseInt(e.target.value))
+                        setFilterCutoff(parseInt(e.target.value))
                       }
                       className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                     />
                   </div>
-                )}
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-gray-700">
+                      Distortion
+                    </label>
+                    <button
+                      onClick={() =>
+                        setIsDistortionEnabled(!isDistortionEnabled)
+                      }
+                      className={`px-3 py-1 rounded-md text-sm font-medium ${
+                        isDistortionEnabled
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-gray-100 text-gray-700"
+                      }`}
+                    >
+                      {isDistortionEnabled ? "Enabled" : "Disabled"}
+                    </button>
+                  </div>
+                  {isDistortionEnabled && (
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="distortion"
+                        className="block text-sm font-medium text-gray-700"
+                      >
+                        Amount: {distortionAmount}%
+                      </label>
+                      <input
+                        type="range"
+                        id="distortion"
+                        min="0"
+                        max="100"
+                        value={distortionAmount}
+                        onChange={(e) =>
+                          setDistortionAmount(parseInt(e.target.value))
+                        }
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-gray-700">
+                      Compression
+                    </label>
+                    <button
+                      onClick={() =>
+                        setIsCompressionEnabled(!isCompressionEnabled)
+                      }
+                      className={`px-3 py-1 rounded-md text-sm font-medium ${
+                        isCompressionEnabled
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-gray-100 text-gray-700"
+                      }`}
+                    >
+                      {isCompressionEnabled ? "Enabled" : "Disabled"}
+                    </button>
+                  </div>
+                  {isCompressionEnabled && (
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="compression"
+                        className="block text-sm font-medium text-gray-700"
+                      >
+                        Amount: {compressionAmount}%
+                      </label>
+                      <input
+                        type="range"
+                        id="compression"
+                        min="0"
+                        max="100"
+                        value={compressionAmount}
+                        onChange={(e) =>
+                          setCompressionAmount(parseInt(e.target.value))
+                        }
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
+            </div>
+
+            {/* Transport Controls */}
+            <div className="flex flex-col space-y-4">
+              <div className="flex space-x-4">
+                <button
+                  onClick={start}
+                  disabled={isPlaying || !!error}
+                  className="flex-1 inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 active:scale-95"
+                >
+                  {isPlaying ? "Playing..." : "Play"}
+                </button>
+                <button
+                  onClick={stop}
+                  disabled={!isPlaying}
+                  className="flex-1 inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 active:scale-95"
+                >
+                  Stop
+                </button>
+              </div>
+
+              <button
+                onClick={toggleNoteDivision}
+                className="w-full inline-flex justify-center items-center px-6 py-3 border border-gray-300 text-base font-medium rounded-lg shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 active:scale-95"
+              >
+                {isSixteenthNotes
+                  ? "Switch to 8th Notes"
+                  : "Switch to 16th Notes"}
+              </button>
             </div>
           </div>
 
-          {/* Step Sequencer */}
-          <div className="space-y-4">
+          {/* Right Column - Sequencer */}
+          <div className="w-1/2 space-y-4">
             <h2 className="text-lg font-semibold text-gray-800">
               Step Sequencer
             </h2>
@@ -695,35 +808,6 @@ export default function Home() {
               steps={steps}
               onStepToggle={handleStepToggle}
             />
-          </div>
-
-          {/* Transport Controls */}
-          <div className="flex flex-col space-y-4">
-            <div className="flex space-x-4">
-              <button
-                onClick={start}
-                disabled={isPlaying || !!error}
-                className="flex-1 inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 active:scale-95"
-              >
-                {isPlaying ? "Playing..." : "Play"}
-              </button>
-              <button
-                onClick={stop}
-                disabled={!isPlaying}
-                className="flex-1 inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 active:scale-95"
-              >
-                Stop
-              </button>
-            </div>
-
-            <button
-              onClick={toggleNoteDivision}
-              className="w-full inline-flex justify-center items-center px-6 py-3 border border-gray-300 text-base font-medium rounded-lg shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 active:scale-95"
-            >
-              {isSixteenthNotes
-                ? "Switch to 8th Notes"
-                : "Switch to 16th Notes"}
-            </button>
           </div>
         </div>
       </div>
