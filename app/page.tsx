@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import InstrumentCard from "./components/InstrumentCard";
 
 type DrumType = "kick" | "snare" | "hihat";
 
@@ -30,7 +31,7 @@ const StepSequencer = ({
   };
 
   return (
-    <div className="w-full flex justify-center p-4 bg-gray-50 rounded-lg">
+    <div className="w-full flex justify-center p-4 bg-base-100 rounded-lg">
       <svg
         width={totalWidth}
         height={totalHeight}
@@ -38,7 +39,7 @@ const StepSequencer = ({
         className="drop-shadow-sm"
       >
         {/* Grid lines */}
-        <g stroke="rgba(0,0,0,0.1)" strokeWidth="1">
+        <g stroke="rgba(255,255,255,0.1)" strokeWidth="1">
           {Array.from({ length: stepsPerTrack - 1 }).map((_, i) => (
             <g key={i}>
               <line
@@ -68,7 +69,7 @@ const StepSequencer = ({
             y={track * (squareSize + gap) + squareSize / 2}
             textAnchor="end"
             dominantBaseline="middle"
-            className="text-xs fill-gray-500"
+            className="text-xs fill-base-content/70"
           >
             {label}
           </text>
@@ -91,8 +92,8 @@ const StepSequencer = ({
                   width={squareSize}
                   height={squareSize}
                   rx="4"
-                  fill={isBeat ? "rgb(229, 231, 235)" : "rgb(243, 244, 246)"}
-                  className="transition-colors duration-100 cursor-pointer hover:fill-gray-200"
+                  fill={isBeat ? "rgb(55, 65, 81)" : "rgb(31, 41, 55)"}
+                  className="transition-colors duration-100 cursor-pointer hover:fill-base-300"
                   onClick={() => handleStepClick(trackIndex, stepIndex)}
                 />
 
@@ -549,14 +550,14 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-6xl">
-        <h1 className="text-3xl font-bold text-center text-gray-800 mb-8">
-          Swing Machine
+    <main className="min-h-screen flex items-center justify-center bg-base-300" data-theme="darkGrey">
+      <div className="bg-base-200 p-8 rounded-xl shadow-lg w-full max-w-6xl">
+        <h1 className="text-3xl font-bold text-center text-base-content mb-8">
+          - swinglab -
         </h1>
 
         {error && (
-          <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+          <div className="mb-4 p-4 bg-error/20 border border-error text-error-content rounded">
             {error}
           </div>
         )}
@@ -565,249 +566,229 @@ export default function Home() {
           {/* Left Column - Controls */}
           <div className="w-1/2 space-y-8">
             {/* Global Controls */}
-            <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">
-                Global Controls
-              </h2>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label
-                    htmlFor="tempo"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Tempo: {tempo} BPM
-                  </label>
-                  <input
-                    type="range"
-                    id="tempo"
-                    min="60"
-                    max="200"
-                    value={tempo}
-                    onChange={(e) => setTempo(parseInt(e.target.value))}
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                  />
-                </div>
+            <div className="card bg-base-100 shadow-xl">
+              <div className="card-body">
+                <h2 className="card-title text-base-content">
+                  Global Controls
+                </h2>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="tempo"
+                      className="block text-sm font-medium text-base-content"
+                    >
+                      Tempo: {tempo} BPM
+                    </label>
+                    <input
+                      type="range"
+                      id="tempo"
+                      min="60"
+                      max="200"
+                      value={tempo}
+                      onChange={(e) => setTempo(parseInt(e.target.value))}
+                      className="range range-primary"
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <label
-                    htmlFor="velocity"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Velocity: {velocity}%
-                  </label>
-                  <input
-                    type="range"
-                    id="velocity"
-                    min="0"
-                    max="100"
-                    value={velocity}
-                    onChange={(e) => setVelocity(parseInt(e.target.value))}
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                  />
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="velocity"
+                      className="block text-sm font-medium text-base-content"
+                    >
+                      Velocity: {velocity}%
+                    </label>
+                    <input
+                      type="range"
+                      id="velocity"
+                      min="0"
+                      max="100"
+                      value={velocity}
+                      onChange={(e) => setVelocity(parseInt(e.target.value))}
+                      className="range range-primary"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Sample Controls */}
             {["Kick", "Snare", "Hi-hat"].map((label, index) => (
-              <div key={label} className="space-y-4 p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-gray-800">
-                    {label}
-                  </h2>
-                  <button
-                    onClick={() => randomizeTrack(index)}
-                    disabled={isPlaying}
-                    className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
-                      isRandomizing === index
-                        ? "bg-purple-100 text-purple-700"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
-                  >
-                    {isRandomizing === index ? "Randomizing..." : "Randomize"}
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  <label
-                    htmlFor={`swing-${label}`}
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Swing: {swingAmounts[index]}%
-                  </label>
-                  <input
-                    type="range"
-                    id={`swing-${label}`}
-                    min="0"
-                    max="100"
-                    value={swingAmounts[index]}
-                    onChange={(e) =>
-                      handleSwingChange(index, parseInt(e.target.value))
-                    }
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                  />
-                </div>
-              </div>
+              <InstrumentCard
+                key={label}
+                label={label}
+                swingAmount={swingAmounts[index]}
+                isRandomizing={isRandomizing === index}
+                isPlaying={isPlaying}
+                onSwingChange={(value) => handleSwingChange(index, value)}
+                onRandomize={() => randomizeTrack(index)}
+              />
             ))}
 
             {/* Effects Controls */}
-            <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">
-                Effects
-              </h2>
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-gray-700">
-                      Filter
-                    </label>
-                  </div>
+            <div className="card bg-base-100 shadow-xl">
+              <div className="card-body">
+                <h2 className="card-title text-base-content">
+                  Effects
+                </h2>
+                <div className="space-y-6">
                   <div className="space-y-2">
-                    <label
-                      htmlFor="filterCutoff"
-                      className="block text-sm font-medium text-gray-700"
-                    >
-                      Cutoff: {filterCutoff} Hz
-                    </label>
-                    <input
-                      type="range"
-                      id="filterCutoff"
-                      min="20"
-                      max="20000"
-                      step="1"
-                      value={filterCutoff}
-                      onChange={(e) =>
-                        setFilterCutoff(parseInt(e.target.value))
-                      }
-                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-gray-700">
-                      Distortion
-                    </label>
-                    <button
-                      onClick={() =>
-                        setIsDistortionEnabled(!isDistortionEnabled)
-                      }
-                      className={`px-3 py-1 rounded-md text-sm font-medium ${
-                        isDistortionEnabled
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-gray-100 text-gray-700"
-                      }`}
-                    >
-                      {isDistortionEnabled ? "Enabled" : "Disabled"}
-                    </button>
-                  </div>
-                  {isDistortionEnabled && (
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-base-content">
+                        Filter
+                      </label>
+                    </div>
                     <div className="space-y-2">
                       <label
-                        htmlFor="distortion"
-                        className="block text-sm font-medium text-gray-700"
+                        htmlFor="filterCutoff"
+                        className="block text-sm font-medium text-base-content"
                       >
-                        Amount: {distortionAmount}%
+                        Cutoff: {filterCutoff} Hz
                       </label>
                       <input
                         type="range"
-                        id="distortion"
-                        min="0"
-                        max="100"
-                        value={distortionAmount}
+                        id="filterCutoff"
+                        min="20"
+                        max="20000"
+                        step="1"
+                        value={filterCutoff}
                         onChange={(e) =>
-                          setDistortionAmount(parseInt(e.target.value))
+                          setFilterCutoff(parseInt(e.target.value))
                         }
-                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                        className="range range-accent"
                       />
                     </div>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-gray-700">
-                      Compression
-                    </label>
-                    <button
-                      onClick={() =>
-                        setIsCompressionEnabled(!isCompressionEnabled)
-                      }
-                      className={`px-3 py-1 rounded-md text-sm font-medium ${
-                        isCompressionEnabled
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-gray-100 text-gray-700"
-                      }`}
-                    >
-                      {isCompressionEnabled ? "Enabled" : "Disabled"}
-                    </button>
                   </div>
-                  {isCompressionEnabled && (
-                    <div className="space-y-2">
-                      <label
-                        htmlFor="compression"
-                        className="block text-sm font-medium text-gray-700"
-                      >
-                        Amount: {compressionAmount}%
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-base-content">
+                        Distortion
                       </label>
-                      <input
-                        type="range"
-                        id="compression"
-                        min="0"
-                        max="100"
-                        value={compressionAmount}
-                        onChange={(e) =>
-                          setCompressionAmount(parseInt(e.target.value))
+                      <button
+                        onClick={() =>
+                          setIsDistortionEnabled(!isDistortionEnabled)
                         }
-                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                      />
+                        className={`btn btn-sm ${
+                          isDistortionEnabled ? "btn-primary" : "btn-ghost"
+                        }`}
+                      >
+                        {isDistortionEnabled ? "Enabled" : "Disabled"}
+                      </button>
                     </div>
-                  )}
+                    {isDistortionEnabled && (
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="distortion"
+                          className="block text-sm font-medium text-base-content"
+                        >
+                          Amount: {distortionAmount}%
+                        </label>
+                        <input
+                          type="range"
+                          id="distortion"
+                          min="0"
+                          max="100"
+                          value={distortionAmount}
+                          onChange={(e) =>
+                            setDistortionAmount(parseInt(e.target.value))
+                          }
+                          className="range range-primary"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-base-content">
+                        Compression
+                      </label>
+                      <button
+                        onClick={() =>
+                          setIsCompressionEnabled(!isCompressionEnabled)
+                        }
+                        className={`btn btn-sm ${
+                          isCompressionEnabled ? "btn-primary" : "btn-ghost"
+                        }`}
+                      >
+                        {isCompressionEnabled ? "Enabled" : "Disabled"}
+                      </button>
+                    </div>
+                    {isCompressionEnabled && (
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="compression"
+                          className="block text-sm font-medium text-base-content"
+                        >
+                          Amount: {compressionAmount}%
+                        </label>
+                        <input
+                          type="range"
+                          id="compression"
+                          min="0"
+                          max="100"
+                          value={compressionAmount}
+                          onChange={(e) =>
+                            setCompressionAmount(parseInt(e.target.value))
+                          }
+                          className="range range-primary"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Transport Controls */}
-            <div className="flex flex-col space-y-4">
-              <div className="flex space-x-4">
-                <button
-                  onClick={start}
-                  disabled={isPlaying || !!error}
-                  className="flex-1 inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 active:scale-95"
-                >
-                  {isPlaying ? "Playing..." : "Play"}
-                </button>
-                <button
-                  onClick={stop}
-                  disabled={!isPlaying}
-                  className="flex-1 inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 active:scale-95"
-                >
-                  Stop
-                </button>
-              </div>
+            <div className="card bg-base-100 shadow-xl">
+              <div className="card-body">
+                <div className="flex flex-col space-y-4">
+                  <div className="flex space-x-4">
+                    <button
+                      onClick={start}
+                      disabled={isPlaying || !!error}
+                      className="btn btn-success flex-1"
+                    >
+                      {isPlaying ? "Playing..." : "Play"}
+                    </button>
+                    <button
+                      onClick={stop}
+                      disabled={!isPlaying}
+                      className="btn btn-error flex-1"
+                    >
+                      Stop
+                    </button>
+                  </div>
 
-              <button
-                onClick={toggleNoteDivision}
-                className="w-full inline-flex justify-center items-center px-6 py-3 border border-gray-300 text-base font-medium rounded-lg shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 active:scale-95"
-              >
-                {isSixteenthNotes
-                  ? "Switch to 8th Notes"
-                  : "Switch to 16th Notes"}
-              </button>
+                  <button
+                    onClick={toggleNoteDivision}
+                    className="btn btn-outline w-full"
+                  >
+                    {isSixteenthNotes
+                      ? "Switch to 8th Notes"
+                      : "Switch to 16th Notes"}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
           {/* Right Column - Sequencer */}
           <div className="w-1/2 space-y-4">
-            <h2 className="text-lg font-semibold text-gray-800">
-              Step Sequencer
-            </h2>
-            <StepSequencer
-              currentStep={currentStep}
-              isPlaying={isPlaying}
-              steps={steps}
-              onStepToggle={handleStepToggle}
-            />
+            <div className="card bg-base-100 shadow-xl">
+              <div className="card-body">
+                <h2 className="card-title text-base-content">
+                  Step Sequencer
+                </h2>
+                <StepSequencer
+                  currentStep={currentStep}
+                  isPlaying={isPlaying}
+                  steps={steps}
+                  onStepToggle={handleStepToggle}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
