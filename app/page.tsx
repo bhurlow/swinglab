@@ -37,6 +37,7 @@ const StepSequencer = ({
         height={totalHeight}
         viewBox={`0 0 ${totalWidth} ${totalHeight}`}
         className="drop-shadow-sm"
+        style={{ pointerEvents: 'all' }}
       >
         {/* Grid lines */}
         <g stroke="rgba(255,255,255,0.1)" strokeWidth="1">
@@ -95,6 +96,7 @@ const StepSequencer = ({
                   fill={isBeat ? "rgb(55, 65, 81)" : "rgb(31, 41, 55)"}
                   className="transition-colors duration-100 cursor-pointer hover:fill-base-300"
                   onClick={() => handleStepClick(trackIndex, stepIndex)}
+                  style={{ pointerEvents: 'all' }}
                 />
 
                 {/* Active step indicator */}
@@ -107,6 +109,7 @@ const StepSequencer = ({
                     rx="2"
                     fill="rgb(59, 130, 246)"
                     className="transition-all duration-100"
+                    style={{ pointerEvents: 'none' }}
                   />
                 )}
 
@@ -121,6 +124,7 @@ const StepSequencer = ({
                     fill="rgb(34, 197, 94)"
                     fillOpacity="0.2"
                     className="transition-all duration-100"
+                    style={{ pointerEvents: 'none' }}
                   >
                     <animate
                       attributeName="opacity"
@@ -138,6 +142,7 @@ const StepSequencer = ({
                     cy={y + squareSize / 2}
                     r="2"
                     fill="rgb(156, 163, 175)"
+                    style={{ pointerEvents: 'none' }}
                   />
                 )}
               </g>
