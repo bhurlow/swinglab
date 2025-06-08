@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build --turbo",
+    "build:wasm": "cd engine && wasm-pack build --target web",
+    "build": "npm run build:wasm && next build --turbo",
     "start": "next start",
     "lint": "next lint"
   },
@@ -23,6 +24,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.3.2",
     "tailwindcss": "^4.1.7",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wasm-pack": "^0.12.1"
   }
 }

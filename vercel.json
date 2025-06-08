@@ -1,0 +1,9 @@
+{
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "buildEnvironment": {
+    "RUSTUP_HOME": "/opt/buildhome/.rustup",
+    "CARGO_HOME": "/opt/buildhome/.cargo"
+  }
+} 
