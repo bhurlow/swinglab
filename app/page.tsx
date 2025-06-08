@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import InstrumentCard from "./components/InstrumentCard";
 
+import init, { add, process_audio } from "../engine/pkg/swinglab_engine.js";
+
 type DrumType = "kick" | "snare" | "hihat";
 
 interface StepSequencerProps {
@@ -188,6 +190,8 @@ export default function Home() {
   const [isDistortionEnabled, setIsDistortionEnabled] = useState(false);
   const [isCompressionEnabled, setIsCompressionEnabled] = useState(false);
   const [isRandomizing, setIsRandomizing] = useState<number | null>(null);
+  const [gain, setGain] = useState(0.8); // Default gain value
+  const gainRef = useRef(gain);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const buffersRef = useRef<{ [key in DrumType]: AudioBuffer | null }>({
@@ -400,6 +404,11 @@ export default function Home() {
     }
   }, [isCompressionEnabled]);
 
+  // Update gain ref when gain state changes
+  useEffect(() => {
+    gainRef.current = gain;
+  }, [gain]);
+
   const scheduleNote = (time: number) => {
     if (!audioContextRef.current || !filterRef.current) return;
 
@@ -412,6 +421,20 @@ export default function Home() {
         const buffer = buffersRef.current[drumType];
 
         if (buffer && audioContextRef.current) {
+          // Create a new buffer for the processed audio
+          const processedBuffer = audioContextRef.current.createBuffer(
+            buffer.numberOfChannels,
+            buffer.length,
+            buffer.sampleRate
+          );
+
+          // Process each channel through WASM
+          for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+            const inputData = buffer.getChannelData(channel);
+            const outputData = processedBuffer.getChannelData(channel);
+            process_audio(inputData, outputData, buffer.sampleRate, gainRef.current);
+          }
+
           const source = audioContextRef.current.createBufferSource();
           const gainNode = audioContextRef.current.createGain();
 
@@ -436,7 +459,7 @@ export default function Home() {
           // Apply the velocity with natural variation
           gainNode.gain.value = baseVelocity * velocityMultiplier;
 
-          source.buffer = buffer;
+          source.buffer = processedBuffer; // Use the processed buffer instead of the original
           source.connect(gainNode);
           gainNode.connect(filterRef.current!);
           source.start(time);
@@ -554,6 +577,22 @@ export default function Home() {
     setTimeout(() => setIsRandomizing(null), 500);
   };
 
+  useEffect(() => {
+    init().then(() => {
+      const result = add(2, 3);
+      console.log("WASM add(2, 3) =", result);
+
+      // Test audio processing
+      const input = new Float32Array([0.5, 0.3, -0.2, 0.8]);
+      const output = new Float32Array(input.length);
+      process_audio(input, output, 44100, 0.8);
+      console.log("WASM audio processing test:", {
+        input: Array.from(input),
+        output: Array.from(output)
+      });
+    });
+  }, []);
+
   return (
     <main className="min-h-screen flex items-center justify-center bg-base-300" data-theme="darkGrey">
       <div className="bg-base-200 p-8 rounded-xl shadow-lg w-full max-w-6xl">
@@ -609,6 +648,25 @@ export default function Home() {
                       max="100"
                       value={velocity}
                       onChange={(e) => setVelocity(parseInt(e.target.value))}
+                      className="range range-primary"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="gain"
+                      className="block text-sm font-medium text-base-content"
+                    >
+                      Gain: {gain}
+                    </label>
+                    <input
+                      type="range"
+                      id="gain"
+                      min="0"
+                      max="2"
+                      step="0.01"
+                      value={gain}
+                      onChange={(e) => setGain(Number(e.target.value))}
                       className="range range-primary"
                     />
                   </div>
