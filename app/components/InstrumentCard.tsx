@@ -18,34 +18,10 @@ const InstrumentCard: FC<InstrumentCardProps> = ({
   onRandomize,
 }) => {
   return (
-    <div className="card bg-base-100 shadow-xl">
-      <figure className="px-4 pt-4">
-        <div className="w-full h-32 bg-base-300 rounded-lg flex items-center justify-center">
-          <span className="text-4xl">🥁</span>
-        </div>
-      </figure>
-      <div className="card-body">
-        <h2 className="card-title text-base-content">{label}</h2>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <label
-              htmlFor={`swing-${label}`}
-              className="block text-sm font-medium text-base-content"
-            >
-              Swing: {swingAmount}%
-            </label>
-            <input
-              type="range"
-              id={`swing-${label}`}
-              min="0"
-              max="100"
-              value={swingAmount}
-              onChange={(e) => onSwingChange(parseInt(e.target.value))}
-              className="range range-secondary"
-            />
-          </div>
-        </div>
-        <div className="card-actions justify-end mt-4">
+    <div className="card bg-base-100 shadow-xl h-full">
+      <div className="card-body p-4">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="card-title text-base-content text-lg">{label}</h2>
           <button
             onClick={onRandomize}
             disabled={isPlaying}
@@ -55,6 +31,26 @@ const InstrumentCard: FC<InstrumentCardProps> = ({
           >
             {isRandomizing ? "Randomizing..." : "Randomize"}
           </button>
+        </div>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label
+              htmlFor={`swing-${label}`}
+              className="text-sm font-medium text-base-content"
+            >
+              Swing
+            </label>
+            <span className="text-sm text-base-content/70">{swingAmount}%</span>
+          </div>
+          <input
+            type="range"
+            id={`swing-${label}`}
+            min="0"
+            max="100"
+            value={swingAmount}
+            onChange={(e) => onSwingChange(parseInt(e.target.value))}
+            className="range range-secondary range-sm"
+          />
         </div>
       </div>
     </div>

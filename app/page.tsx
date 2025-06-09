@@ -675,18 +675,33 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Sample Controls */}
-            {["Kick", "Snare", "Hi-hat"].map((label, index) => (
+            {/* Controls section */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <InstrumentCard
-                key={label}
-                label={label}
-                swingAmount={swingAmounts[index]}
-                isRandomizing={isRandomizing === index}
+                label="Kick"
+                swingAmount={swingAmounts[0]}
+                isRandomizing={isRandomizing === 0}
                 isPlaying={isPlaying}
-                onSwingChange={(value) => handleSwingChange(index, value)}
-                onRandomize={() => randomizeTrack(index)}
+                onSwingChange={(value) => handleSwingChange(0, value)}
+                onRandomize={() => randomizeTrack(0)}
               />
-            ))}
+              <InstrumentCard
+                label="Snare"
+                swingAmount={swingAmounts[1]}
+                isRandomizing={isRandomizing === 1}
+                isPlaying={isPlaying}
+                onSwingChange={(value) => handleSwingChange(1, value)}
+                onRandomize={() => randomizeTrack(1)}
+              />
+              <InstrumentCard
+                label="Hi-hat"
+                swingAmount={swingAmounts[2]}
+                isRandomizing={isRandomizing === 2}
+                isPlaying={isPlaying}
+                onSwingChange={(value) => handleSwingChange(2, value)}
+                onRandomize={() => randomizeTrack(2)}
+              />
+            </div>
 
             {/* Effects Controls */}
             <div className="card bg-base-100 shadow-xl">
