@@ -192,6 +192,7 @@ export default function Home() {
   const [isRandomizing, setIsRandomizing] = useState<number | null>(null);
   const [gain, setGain] = useState(0.8); // Default gain value
   const gainRef = useRef(gain);
+  const [isReverbEnabled, setIsReverbEnabled] = useState(false);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const buffersRef = useRef<{ [key in DrumType]: AudioBuffer | null }>({
@@ -432,7 +433,7 @@ export default function Home() {
           for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
             const inputData = buffer.getChannelData(channel);
             const outputData = processedBuffer.getChannelData(channel);
-            process_audio(inputData, outputData, buffer.sampleRate, gainRef.current);
+            process_audio(inputData, outputData, buffer.sampleRate, gainRef.current, isReverbEnabled);
           }
 
           const source = audioContextRef.current.createBufferSource();
@@ -585,7 +586,7 @@ export default function Home() {
       // Test audio processing
       const input = new Float32Array([0.5, 0.3, -0.2, 0.8]);
       const output = new Float32Array(input.length);
-      process_audio(input, output, 44100, 0.8);
+      process_audio(input, output, 44100, 0.8, false);
       console.log("WASM audio processing test:", {
         input: Array.from(input),
         output: Array.from(output)
@@ -834,6 +835,16 @@ export default function Home() {
                   </button>
                 </div>
               </div>
+            </div>
+
+            {/* Add the reverb toggle button near other controls */}
+            <div className="flex items-center gap-2">
+              <button
+                className={`btn ${isReverbEnabled ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => setIsReverbEnabled(!isReverbEnabled)}
+              >
+                {isReverbEnabled ? 'Reverb On' : 'Reverb Off'}
+              </button>
             </div>
           </div>
 
