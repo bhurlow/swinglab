@@ -61,7 +61,12 @@ FROM base
 # Copy standalone build
 COPY --from=build /app/.next/standalone /app
 COPY --from=build /app/.next/static /app/.next/static
-COPY --from=build /app/public /app/public
+
+# Create public directory if it doesn't exist
+RUN mkdir -p /app/public
+
+# Copy public directory if it exists
+COPY --from=build /app/public /app/public || true
 
 # Start the server by default, this can be overwritten at runtime
 EXPOSE 3000
