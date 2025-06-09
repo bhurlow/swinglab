@@ -16,25 +16,24 @@ ENV NODE_ENV="production"
 ARG PNPM_VERSION=10.11.0
 RUN npm install -g pnpm@$PNPM_VERSION
 
-
 # Throw-away build stage to reduce size of final image
 FROM base AS build
 
 # Install packages needed to build node modules and Rust
-RUN apt-get update -qq && \
+RUN apt-get update -qq &&
     apt-get install --no-install-recommends -y \
-    build-essential \
-    node-gyp \
-    pkg-config \
-    python-is-python3 \
-    curl \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+        build-essential \
+        node-gyp \
+        pkg-config \
+        python-is-python3 \
+        curl \
+        ca-certificates &&
+    rm -rf /var/lib/apt/lists/*
 
 # Install Rust and wasm-pack in one step, source env
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && \
-    . $HOME/.cargo/env && \
-    rustup target add wasm32-unknown-unknown && \
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y &&
+    . $HOME/.cargo/env &&
+    rustup target add wasm32-unknown-unknown &&
     cargo install wasm-pack
 ENV PATH="/root/.cargo/bin:${PATH}"
 
@@ -54,7 +53,6 @@ RUN npx next build
 # Remove development dependencies
 RUN pnpm prune --prod
 
-
 # Final stage for app image
 FROM base
 
@@ -66,7 +64,7 @@ COPY --from=build /app/.next/static /app/.next/static
 RUN mkdir -p /app/public
 
 # Copy public directory if it exists
-COPY --from=build /app/public /app/public || true
+COPY --from=build /app/public /app/public
 
 # Start the server by default, this can be overwritten at runtime
 EXPOSE 3000
