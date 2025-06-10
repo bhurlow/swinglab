@@ -44,6 +44,9 @@ RUN pnpm install --frozen-lockfile --prod=false
 # Copy application code
 COPY . .
 
+# Copy public directory to ensure it exists in the build stage
+COPY public ./public
+
 # Build WASM module
 RUN . $HOME/.cargo/env && cd engine && wasm-pack build --target web
 
