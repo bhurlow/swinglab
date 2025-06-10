@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import InstrumentCard from "./components/InstrumentCard";
+import FilterControls from "./components/FilterControls";
 
 import init, { add, process_audio } from "../engine/pkg/swinglab_engine.js";
 
@@ -341,6 +342,55 @@ export default function Home() {
                 arrayBuffer
               );
               buffersRef.current[type as DrumType] = buffer;
+
+              // Process the buffer with the current filter cutoff
+              const processedBuffer = audioContextRef.current.createBuffer(
+                buffer.numberOfChannels,
+                buffer.length,
+                buffer.sampleRate
+              );
+
+              for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+                const inputData = buffer.getChannelData(channel);
+                const outputData = processedBuffer.getChannelData(channel);
+                process_audio(
+                  inputData,
+                  outputData,
+                  buffer.sampleRate,
+                  gainRef.current,
+                  isReverbEnabled,
+                  filterCutoffRef.current
+                );
+              }
+
+              const source = audioContextRef.current.createBufferSource();
+              const gainNode = audioContextRef.current.createGain();
+
+              // Calculate natural velocity variation
+              const baseVelocity = velocityRef.current / 100;
+              let velocityMultiplier = 1.0;
+
+              // Emphasize downbeats (every 4th step)
+              if (currentNoteRef.current % 4 === 0) {
+                velocityMultiplier = 1.0; // Full velocity on downbeats
+              } else if (currentNoteRef.current % 2 === 0) {
+                velocityMultiplier = 0.85; // Slightly softer on off-beats
+              } else {
+                // For swung notes, vary velocity based on individual track's swing amount
+                const swingAmount = swingAmountsRef.current[type as keyof typeof buffersRef.current] / 100;
+                if (currentNoteRef.current % 2 === 1) {
+                  // For the swung note, make it slightly softer
+                  velocityMultiplier = 0.7 + swingAmount * 0.2; // More swing = slightly louder swung note
+                }
+              }
+
+              // Apply the velocity with natural variation
+              gainNode.gain.value = baseVelocity * velocityMultiplier;
+
+              source.buffer = processedBuffer; // Use the processed buffer instead of the original
+              source.connect(gainNode);
+              gainNode.connect(filterRef.current!);
+              source.start(nextNoteTimeRef.current);
             } catch (decodeError) {
               console.error(`Error decoding ${type} sample:`, decodeError);
               setError(
@@ -433,7 +483,14 @@ export default function Home() {
           for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
             const inputData = buffer.getChannelData(channel);
             const outputData = processedBuffer.getChannelData(channel);
-            process_audio(inputData, outputData, buffer.sampleRate, gainRef.current, isReverbEnabled);
+            process_audio(
+              inputData,
+              outputData,
+              buffer.sampleRate,
+              gainRef.current,
+              isReverbEnabled,
+              filterCutoffRef.current
+            );
           }
 
           const source = audioContextRef.current.createBufferSource();
@@ -594,6 +651,14 @@ export default function Home() {
     });
   }, []);
 
+  // Update the filter cutoff in real-time
+  const handleFilterCutoffChange = (value: number) => {
+    setFilterCutoff(value);
+    if (filterRef.current) {
+      filterRef.current.frequency.value = value;
+    }
+  };
+
   return (
     <main className="min-h-screen flex items-center justify-center bg-base-300" data-theme="darkGrey">
       <div className="bg-base-200 p-8 rounded-xl shadow-lg w-full max-w-6xl">
@@ -717,23 +782,9 @@ export default function Home() {
                       </label>
                     </div>
                     <div className="space-y-2">
-                      <label
-                        htmlFor="filterCutoff"
-                        className="block text-sm font-medium text-base-content"
-                      >
-                        Cutoff: {filterCutoff} Hz
-                      </label>
-                      <input
-                        type="range"
-                        id="filterCutoff"
-                        min="20"
-                        max="20000"
-                        step="1"
-                        value={filterCutoff}
-                        onChange={(e) =>
-                          setFilterCutoff(parseInt(e.target.value))
-                        }
-                        className="range range-accent"
+                      <FilterControls 
+                        cutoff={filterCutoff}
+                        onCutoffChange={handleFilterCutoffChange}
                       />
                     </div>
                   </div>
