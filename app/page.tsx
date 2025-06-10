@@ -210,7 +210,7 @@ export default function Home() {
   const tempoRef = useRef(tempo);
   const velocityRef = useRef(velocity);
   const filterCutoffRef = useRef(filterCutoff);
-  const swingAmountsRef = useRef(swingAmounts);
+  const swingAmountsRef = useRef<number[]>(swingAmounts);
   const distortionAmountRef = useRef(distortionAmount);
   const compressionAmountRef = useRef(compressionAmount);
   const distortionGainRef = useRef<GainNode | null>(null);
@@ -377,7 +377,8 @@ export default function Home() {
                 velocityMultiplier = 0.85; // Slightly softer on off-beats
               } else {
                 // For swung notes, vary velocity based on individual track's swing amount
-                const swingAmount = swingAmountsRef.current[type as keyof typeof buffersRef.current] / 100;
+                const trackIndex = type === "kick" ? 0 : type === "snare" ? 1 : 2;
+                const swingAmount = swingAmountsRef.current[trackIndex] / 100;
                 if (currentNoteRef.current % 2 === 1) {
                   // For the swung note, make it slightly softer
                   velocityMultiplier = 0.7 + swingAmount * 0.2; // More swing = slightly louder swung note
@@ -507,6 +508,7 @@ export default function Home() {
             velocityMultiplier = 0.85; // Slightly softer on off-beats
           } else {
             // For swung notes, vary velocity based on individual track's swing amount
+            const trackIndex = drumType === "kick" ? 0 : drumType === "snare" ? 1 : 2;
             const swingAmount = swingAmountsRef.current[trackIndex] / 100;
             if (currentNoteRef.current % 2 === 1) {
               // For the swung note, make it slightly softer
@@ -643,13 +645,13 @@ export default function Home() {
       // Test audio processing
       const input = new Float32Array([0.5, 0.3, -0.2, 0.8]);
       const output = new Float32Array(input.length);
-      process_audio(input, output, 44100, 0.8, false);
+      process_audio(input, output, 44100, 0.8, false, filterCutoffRef.current);
       console.log("WASM audio processing test:", {
         input: Array.from(input),
         output: Array.from(output)
       });
     });
-  }, []);
+  }, [compressionAmount, distortionAmount, filterCutoff, isCompressionEnabled, isDistortionEnabled, isReverbEnabled]);
 
   // Update the filter cutoff in real-time
   const handleFilterCutoffChange = (value: number) => {
